@@ -9,6 +9,10 @@
   <img src="https://img.shields.io/badge/Tests-87%25-brightgreen" alt="Tests" />
 </p>
 
+<p align="center">
+  <a href="https://abibullaevar.github.io/vue3-task-manager/#/dashboard"><strong>Live Demo</strong></a>
+</p>
+
 A feature-rich project management dashboard built with **Vue 3 Composition API**, **TypeScript**, **Pinia**, and **Feature-Sliced Design**. Includes Kanban board with drag & drop, real-time analytics charts, and comprehensive testing.
 
 ## ✨ Features
@@ -87,11 +91,11 @@ src/
 ## 🚀 Quick Start
 
 ```bash
-pnpm install
-pnpm dev          # Start dev server at http://localhost:5173
-pnpm build        # Production build
-pnpm test         # Run unit tests
-pnpm test:e2e     # Run E2E tests with Playwright
+npm install
+npm run dev          # Start dev server at http://localhost:5173
+npm run build        # Production build
+npm test             # Run unit tests
+npm run test:e2e     # Run E2E tests with Playwright
 ```
 
 ## 🔑 Key Technical Highlights
@@ -207,10 +211,10 @@ export const useTaskSelectors = () => {
 ## 🧪 Testing Strategy
 
 ```bash
-pnpm test                    # Unit + component tests
-pnpm test:coverage           # With coverage report
-pnpm test:e2e                # Playwright E2E tests
-pnpm test:e2e --ui           # Playwright UI mode
+npm test                         # Unit + component tests
+npm run test:coverage            # With coverage report
+npm run test:e2e                 # Playwright E2E tests
+npm run test:e2e:ui              # Playwright UI mode
 ```
 
 **Coverage**: 87% statements, 83% branches
