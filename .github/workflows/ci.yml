@@ -12,15 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: pnpm install --no-frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
 
   unit-tests:
     name: Unit Tests
@@ -28,14 +26,12 @@ jobs:
     needs: lint-and-typecheck
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: pnpm install --no-frozen-lockfile
-      - run: pnpm test:coverage
+          cache: npm
+      - run: npm ci
+      - run: npm run test:coverage
       - name: Check coverage thresholds
         run: |
           COVERAGE=$(cat coverage/coverage-summary.json | jq '.total.statements.pct')
@@ -54,16 +50,14 @@ jobs:
     needs: lint-and-typecheck
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: pnpm install --no-frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium firefox
-      - run: pnpm build
-      - run: pnpm test:e2e
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox
+      - run: npm run build
+      - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -76,14 +70,12 @@ jobs:
     needs: [unit-tests, e2e-tests]
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: pnpm install --no-frozen-lockfile
-      - run: pnpm build
+          cache: npm
+      - run: npm ci
+      - run: npm run build
       - name: Check bundle size
         run: |
           MAX_SIZE=200  # KB gzipped
