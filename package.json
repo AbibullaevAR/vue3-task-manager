@@ -1,0 +1,54 @@
+{
+  "name": "vue3-project-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Feature-rich project management dashboard with Vue 3, TypeScript, Pinia, and Feature-Sliced Design",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "lint": "eslint . --ext .vue,.ts,.tsx",
+    "lint:fix": "eslint . --ext .vue,.ts,.tsx --fix",
+    "typecheck": "vue-tsc --noEmit",
+    "stylelint": "stylelint \"src/**/*.{scss,vue}\""
+  },
+  "dependencies": {
+    "@vueuse/core": "^10.9.0",
+    "echarts": "^5.5.0",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.21",
+    "vue-echarts": "^6.6.8",
+    "vue-router": "^4.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.43.0",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "@vitest/coverage-v8": "^1.6.0",
+    "@vue/test-utils": "^2.4.5",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^9.23.0",
+    "happy-dom": "^14.0.0",
+    "sass": "^1.72.0",
+    "stylelint": "^16.2.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.2.0",
+    "vitest": "^1.6.0",
+    "vue-tsc": "^2.0.6"
+  },
+  "keywords": [
+    "vue3",
+    "typescript",
+    "pinia",
+    "fsd",
+    "kanban",
+    "dashboard",
+    "drag-drop",
+    "virtual-scroll"
+  ]
+}
