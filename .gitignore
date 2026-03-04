@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.nuxt/
+.output/
+.nitro/
+coverage/
+*.local
+*.log
+.DS_Store
+storybook-static/
+.claude/
+.env**
+CLAUDE.md
