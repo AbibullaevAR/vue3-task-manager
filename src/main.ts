@@ -6,7 +6,10 @@ import router from './app/router'
 async function main() {
   if (import.meta.env.PROD) {
     const { worker } = await import('./shared/api/msw/browser')
-    await worker.start({ onUnhandledRequest: 'bypass' })
+    await worker.start({
+      onUnhandledRequest: 'bypass',
+      serviceWorker: { url: `${import.meta.env.BASE_URL}mockServiceWorker.js` },
+    })
   }
 
   const app = createApp(App)
