@@ -3,9 +3,16 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './app/router'
 
-const app = createApp(App)
+async function main() {
+  if (import.meta.env.PROD) {
+    const { worker } = await import('./shared/api/msw/browser')
+    await worker.start({ onUnhandledRequest: 'bypass' })
+  }
 
-app.use(createPinia())
-app.use(router)
+  const app = createApp(App)
+  app.use(createPinia())
+  app.use(router)
+  app.mount('#app')
+}
 
-app.mount('#app')
+main()

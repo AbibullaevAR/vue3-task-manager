@@ -1,11 +1,6 @@
-/// <reference types="vitest" />
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import { resolve } from 'path'
-import type { Connect } from 'vite'
-import type { IncomingMessage, ServerResponse } from 'http'
+import { http, HttpResponse } from 'msw'
 
-// ─── In-memory mock store ─────────────────────────────────────────────────────
+// ─── Seed data (mirrors vite.config.ts mock) ──────────────────────────────────
 const now = () => new Date().toISOString()
 
 const mockUsers = [
@@ -20,7 +15,24 @@ const mockProjects = [
   { id: 'proj-3', name: 'Mobile App', description: 'React Native companion app', status: 'active', color: '#f59e0b', ownerId: 'user-1', memberIds: ['user-1', 'user-3'], taskCount: 0, completedTaskCount: 0, deadline: '2025-12-01', createdAt: '2024-02-01T00:00:00Z', updatedAt: '2024-02-01T00:00:00Z' },
 ]
 
-const mockTasksData = [
+type Task = {
+  id: string
+  title: string
+  description: string
+  status: string
+  priority: string
+  projectId: string
+  assigneeId: string | null
+  creatorId: string
+  tags: string[]
+  deadline: string | null
+  estimatedHours: number
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+const seedTasks: Task[] = [
   { id: 'task-1', title: 'Setup project structure', description: 'Initialize the repo and configure build tools', status: 'done', priority: 'high', projectId: 'proj-1', assigneeId: 'user-1', creatorId: 'user-1', tags: ['setup', 'devops'], deadline: null, estimatedHours: 4, order: 0, createdAt: '2024-01-10T00:00:00Z', updatedAt: '2024-01-11T00:00:00Z' },
   { id: 'task-2', title: 'Design system tokens', description: 'Define colors, typography, and spacing', status: 'done', priority: 'high', projectId: 'proj-1', assigneeId: 'user-2', creatorId: 'user-1', tags: ['design', 'ui'], deadline: null, estimatedHours: 6, order: 1, createdAt: '2024-01-11T00:00:00Z', updatedAt: '2024-01-12T00:00:00Z' },
   { id: 'task-3', title: 'Implement Kanban board', description: 'Drag and drop task management with columns', status: 'in_progress', priority: 'critical', projectId: 'proj-1', assigneeId: 'user-1', creatorId: 'user-1', tags: ['frontend', 'feature'], deadline: '2025-03-15', estimatedHours: 16, order: 0, createdAt: '2024-01-12T00:00:00Z', updatedAt: '2024-01-15T00:00:00Z' },
@@ -33,132 +45,69 @@ const mockTasksData = [
   { id: 'task-10', title: 'Offline mode', description: 'Service Worker with background sync', status: 'todo', priority: 'medium', projectId: 'proj-1', assigneeId: 'user-3', creatorId: 'user-1', tags: ['pwa', 'offline'], deadline: '2025-05-01', estimatedHours: 12, order: 2, createdAt: '2024-01-21T00:00:00Z', updatedAt: '2024-01-21T00:00:00Z' },
 ]
 
-const tasks = new Map(mockTasksData.map(t => [t.id, { ...t }]))
-let taskIdCounter = mockTasksData.length + 1
+const tasks = new Map<string, Task>(seedTasks.map(t => [t.id, { ...t }]))
+let taskIdCounter = seedTasks.length + 1
 
-// ─── Mock API middleware ───────────────────────────────────────────────────────
-function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
-  return new Promise((resolve) => {
-    let body = ''
-    req.on('data', (chunk) => { body += chunk })
-    req.on('end', () => {
-      try { resolve(JSON.parse(body)) } catch { resolve({}) }
-    })
-  })
-}
+// ─── Handlers ─────────────────────────────────────────────────────────────────
+export const handlers = [
+  // GET /api/tasks
+  http.get('/api/tasks', ({ request }) => {
+    const url = new URL(request.url)
+    const projectId = url.searchParams.get('projectId')
+    const list = [...tasks.values()]
+    return HttpResponse.json(projectId ? list.filter(t => t.projectId === projectId) : list)
+  }),
 
-function json(res: ServerResponse, data: unknown, status = 200) {
-  res.writeHead(status, { 'Content-Type': 'application/json' })
-  res.end(JSON.stringify(data))
-}
+  // GET /api/tasks/:id
+  http.get('/api/tasks/:id', ({ params }) => {
+    const task = tasks.get(params.id as string)
+    return task
+      ? HttpResponse.json(task)
+      : HttpResponse.json({ message: 'Not found' }, { status: 404 })
+  }),
 
-function mockApiMiddleware(): Connect.HandleFunction {
-  return async (req, res, next) => {
-    const url = req.url ?? ''
-    const method = req.method ?? 'GET'
+  // POST /api/tasks
+  http.post('/api/tasks', async ({ request }) => {
+    const body = await request.json() as Partial<Task>
+    const id = `task-${++taskIdCounter}`
+    const task: Task = { ...body, id, order: 0, creatorId: 'user-1', createdAt: now(), updatedAt: now() } as Task
+    tasks.set(id, task)
+    return HttpResponse.json(task, { status: 201 })
+  }),
 
-    if (!url.startsWith('/api/')) return next()
+  // PATCH /api/tasks/:id
+  http.patch('/api/tasks/:id', async ({ params, request }) => {
+    const task = tasks.get(params.id as string)
+    if (!task) return HttpResponse.json({ message: 'Not found' }, { status: 404 })
+    const body = await request.json() as Partial<Task>
+    const updated = { ...task, ...body, updatedAt: now() }
+    tasks.set(params.id as string, updated)
+    return HttpResponse.json(updated)
+  }),
 
-    const path = url.replace('/api', '').split('?')[0]
-    const parts = path.split('/').filter(Boolean)
+  // PUT /api/tasks/:id/reorder
+  http.put('/api/tasks/:id/reorder', async ({ params, request }) => {
+    const task = tasks.get(params.id as string)
+    if (!task) return HttpResponse.json({ message: 'Not found' }, { status: 404 })
+    const body = await request.json() as Partial<Task>
+    const updated = { ...task, ...body, updatedAt: now() }
+    tasks.set(params.id as string, updated)
+    return new HttpResponse(null, { status: 204 })
+  }),
 
-    // GET /api/tasks
-    if (method === 'GET' && parts[0] === 'tasks' && !parts[1]) {
-      const projectId = new URL(url, 'http://x').searchParams.get('projectId')
-      const list = [...tasks.values()]
-      return json(res, projectId ? list.filter(t => t.projectId === projectId) : list)
-    }
+  // DELETE /api/tasks/:id
+  http.delete('/api/tasks/:id', ({ params }) => {
+    tasks.delete(params.id as string)
+    return new HttpResponse(null, { status: 204 })
+  }),
 
-    // GET /api/tasks/:id
-    if (method === 'GET' && parts[0] === 'tasks' && parts[1] && !parts[2]) {
-      const task = tasks.get(parts[1])
-      return task ? json(res, task) : json(res, { message: 'Not found' }, 404)
-    }
+  // GET /api/projects
+  http.get('/api/projects', () => {
+    return HttpResponse.json(mockProjects)
+  }),
 
-    // POST /api/tasks
-    if (method === 'POST' && parts[0] === 'tasks') {
-      const body = await readBody(req)
-      const id = `task-${++taskIdCounter}`
-      const task = { id, ...body, order: 0, creatorId: 'user-1', createdAt: now(), updatedAt: now() }
-      tasks.set(id, task as typeof mockTasksData[0])
-      return json(res, task, 201)
-    }
-
-    // PATCH /api/tasks/:id
-    if (method === 'PATCH' && parts[0] === 'tasks' && parts[1]) {
-      const task = tasks.get(parts[1])
-      if (!task) return json(res, { message: 'Not found' }, 404)
-      const body = await readBody(req)
-      const updated = { ...task, ...body, updatedAt: now() }
-      tasks.set(parts[1], updated)
-      return json(res, updated)
-    }
-
-    // PUT /api/tasks/:id/reorder
-    if (method === 'PUT' && parts[0] === 'tasks' && parts[2] === 'reorder') {
-      const task = tasks.get(parts[1])
-      if (!task) return json(res, { message: 'Not found' }, 404)
-      const body = await readBody(req)
-      const updated = { ...task, ...(body as object), updatedAt: now() }
-      tasks.set(parts[1], updated)
-      return json(res, null)
-    }
-
-    // DELETE /api/tasks/:id
-    if (method === 'DELETE' && parts[0] === 'tasks' && parts[1]) {
-      tasks.delete(parts[1])
-      res.writeHead(204)
-      return res.end()
-    }
-
-    // GET /api/projects
-    if (method === 'GET' && parts[0] === 'projects') {
-      return json(res, mockProjects)
-    }
-
-    // GET /api/users
-    if (method === 'GET' && parts[0] === 'users') {
-      return json(res, mockUsers)
-    }
-
-    next()
-  }
-}
-
-// ─── Vite config ──────────────────────────────────────────────────────────────
-export default defineConfig({
-  base: process.env.VITE_BASE_PATH ?? '/',
-  plugins: [
-    vue(),
-    {
-      name: 'mock-api',
-      configureServer(server) {
-        server.middlewares.use(mockApiMiddleware())
-      },
-    },
-  ],
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src'),
-    },
-  },
-  test: {
-    environment: 'happy-dom',
-    globals: true,
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'lcov'],
-      thresholds: {
-        statements: 85,
-        branches: 80,
-        functions: 85,
-        lines: 85,
-      },
-    },
-    resolve: {
-      alias: {
-        '@': resolve(__dirname, 'src'),
-      },
-    },
-  },
-})
+  // GET /api/users
+  http.get('/api/users', () => {
+    return HttpResponse.json(mockUsers)
+  }),
+]
