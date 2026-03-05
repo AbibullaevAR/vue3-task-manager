@@ -16,6 +16,10 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     throw new Error(error.message || `HTTP ${response.status}`)
   }
 
+  if (response.status === 204 || response.headers.get('Content-Length') === '0') {
+    return undefined as T
+  }
+
   return response.json()
 }
 
